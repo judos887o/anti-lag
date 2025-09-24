@@ -1,0 +1,119 @@
+-- ULTRA ANTI AURA / SUITS v6 (Executor Client Script)
+-- by Filip & ChatGPT
+-- Entfernt gezielt Auren / Suits ohne Konsole zu spammen
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local Workspace = game:GetService("Workspace")
+
+-- IDs blocken
+local BLOCKED_IDS = {
+    "74402554637223",   -- Feather-Suit
+    "76295890118366",   -- Forcefield-Aura
+    "85257474635214",   -- Forcefield-Aura
+    "109726082327117",  -- Red-Feather-Suit
+    "97574673543860",   -- Camo-Fur-Suit
+    "82156357033857",   -- Pink-Fur-Suit
+    "87899667012649",   -- Yellow-Fur-Suit
+    "88299718355153",   -- Forcefield-Aura
+    "131170673879471",  -- Forcefield-Aura
+    "135860713528651",  -- Fur-Suit
+}
+
+local KEYWORDS = { "aura", "forcefield", "suit", "feather", "fur" }
+
+-- String check
+local function matchesBlocked(str)
+    str = tostring(str or ""):lower()
+    for _, kw in ipairs(KEYWORDS) do
+        if str:find(kw, 1, true) then return true end
+    end
+    for _, id in ipairs(BLOCKED_IDS) do
+        if str:find(id, 1, true) then return true end
+    end
+    return false
+end
+
+-- Destroy mit wenig Debug
+local function nuke(inst, reason)
+    if inst and inst.Parent then
+        pcall(function()
+            inst:Destroy()
+            print("[ANTI] Entfernt:", inst.ClassName, inst.Name, "Grund:", reason)
+        end)
+    end
+end
+
+-- Prüfen
+local function handle(inst)
+    if not inst then return end
+    local cname = inst.ClassName
+    local lname = (inst.Name or ""):lower()
+
+    -- Name/ID Match
+    if matchesBlocked(lname) then
+        return nuke(inst, "Name/ID")
+    end
+
+    -- Klassen hart löschen
+    if cname == "ForceField" or cname == "Highlight" or cname == "SelectionBox" or cname == "BillboardGui" or cname == "SurfaceGui" then
+        return nuke(inst, cname)
+    end
+
+    -- Accessory / Hat
+    if inst:IsA("Accessory") or inst:IsA("Hat") then
+        if matchesBlocked(lname) then
+            return nuke(inst, "Accessory")
+        end
+    end
+
+    -- MeshPart / BasePart
+    if inst:IsA("MeshPart") or inst:IsA("Part") then
+        if matchesBlocked(inst.MeshId) or matchesBlocked(inst.TextureID) then
+            return nuke(inst, "MeshPart")
+        end
+    end
+
+    -- SpecialMesh
+    if inst:IsA("SpecialMesh") then
+        if matchesBlocked(inst.MeshId) or matchesBlocked(inst.TextureId) then
+            return nuke(inst, "SpecialMesh")
+        end
+    end
+
+    -- Decal / Texture
+    if inst:IsA("Decal") or inst:IsA("Texture") then
+        if matchesBlocked(inst.Texture) then
+            return nuke(inst, "Decal/Texture")
+        end
+    end
+
+    -- Effekte
+    if inst:IsA("ParticleEmitter") or inst:IsA("Trail") or inst:IsA("Beam") or inst:IsA("Sparkles") or inst:IsA("Fire") or inst:IsA("Smoke") then
+        if matchesBlocked(lname) or matchesBlocked(inst.Texture) then
+            return nuke(inst, "Effect")
+        end
+    end
+end
+
+-- Initial Scan (einmalig ohne Spam)
+task.spawn(function()
+    for _, d in ipairs(Workspace:GetDescendants()) do
+        handle(d)
+    end
+end)
+
+-- Echtzeit-Check
+Workspace.DescendantAdded:Connect(handle)
+
+-- Character überwachen
+local function cleanChar(char)
+    for _, d in ipairs(char:GetDescendants()) do
+        handle(d)
+    end
+    char.DescendantAdded:Connect(handle)
+end
+if player.Character then cleanChar(player.Character) end
+player.CharacterAdded:Connect(cleanChar)
+
+print("[ANTI AURA V6] läuft ✅ – stabil ohne Konsole zu fluten.")
